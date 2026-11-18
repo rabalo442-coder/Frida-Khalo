@@ -1,0 +1,9 @@
+Imágenes de los cuadros (nombres exactos, .jpg):
+
+las-dos-fridas.jpg            -> Las dos Fridas (1939)
+collar-de-espinas.jpg         -> Autorretrato con collar de espinas y colibrí (1940)
+la-columna-rota.jpg           -> La columna rota (1944)
+diego-en-mi-pensamiento.jpg   -> Diego en mi pensamiento / Autorretrato como tehuana (1943)
+viva-la-vida.jpg              -> Viva la vida (1954)
+
+Si reemplazás una, mantené el mismo nombre. Ideal: menos de 400 KB cada una.
