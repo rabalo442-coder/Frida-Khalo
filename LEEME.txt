@@ -1,9 +1,9 @@
-Imágenes de los cuadros (nombres exactos, .jpg):
+Imágenes que usa el sitio (nombres exactos):
 
-las-dos-fridas.jpg            -> Las dos Fridas (1939)
-collar-de-espinas.jpg         -> Autorretrato con collar de espinas y colibrí (1940)
-la-columna-rota.jpg           -> La columna rota (1944)
-diego-en-mi-pensamiento.jpg   -> Diego en mi pensamiento / Autorretrato como tehuana (1943)
-viva-la-vida.jpg              -> Viva la vida (1954)
+cuarto-360.jpg               -> el cuarto 360 (ya está)
+mi-familia.jpg               -> Mi familia, el cuadro del caballete (falta)
+las-dos-fridas.jpg, diego-en-mi-pensamiento.jpg, collar-de-espinas.jpg,
+la-columna-rota.jpg, viva-la-vida.jpg -> ya están
 
-Si reemplazás una, mantené el mismo nombre. Ideal: menos de 400 KB cada una.
+
+Mientras falte mi-familia.jpg, el caballete muestra un cartel rosa.

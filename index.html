@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1d4ea3">
+<title>Desde la cama de Frida</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Work+Sans:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+<style>
+  :root{--azul:#1d4ea3;--azul-n:#0f2f6b;--rosa:#e4007c;--amarillo:#f2b51b;--verde:#2f7d4f;--crema:#fbf3e4;--tinta:#1b1a2e}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:"Work Sans",system-ui,sans-serif;color:var(--tinta)}
+  a-scene{position:fixed;inset:0}
+
+  #intro{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:flex-end;
+    padding:max(28px,env(safe-area-inset-top)) 26px max(36px,env(safe-area-inset-bottom));
+    background:radial-gradient(120% 70% at 50% 0%,#2a5fbd 0%,var(--azul) 40%,#08183a 100%);color:var(--crema);transition:opacity .8s ease}
+  #intro.hide{opacity:0;pointer-events:none}
+  .kicker{font-weight:600;font-size:14px;color:var(--amarillo);margin:0 0 8px}
+  #intro h1{font-family:"Abril Fatface",Georgia,serif;font-weight:400;font-size:clamp(42px,12.5vw,78px);line-height:.98;margin:0 0 16px}
+  #intro p.lead{font-size:17px;line-height:1.5;max-width:32ch;margin:0 0 28px;opacity:.92}
+  .btn{appearance:none;border:0;border-radius:999px;background:var(--rosa);color:#fff;font:600 18px "Work Sans",sans-serif;
+    padding:17px 28px;min-height:56px;cursor:pointer;box-shadow:0 8px 0 #9c0056;align-self:flex-start}
+  .btn:active{transform:translateY(4px);box-shadow:0 4px 0 #9c0056}
+  .btn:focus-visible{outline:3px solid var(--amarillo);outline-offset:3px}
+  .fine{font-size:13px;opacity:.7;margin:18px 0 0;max-width:36ch}
+
+  /* Párpados: la experiencia empieza "abriendo los ojos" */
+  .lid{position:fixed;left:0;right:0;height:51%;background:#000;z-index:18;pointer-events:none;transition:transform 2.4s cubic-bezier(.6,0,.2,1)}
+  #lid-top{top:0;transform:translateY(0)} #lid-bot{bottom:0;transform:translateY(0)}
+  body.awake #lid-top{transform:translateY(-100%)} body.awake #lid-bot{transform:translateY(100%)}
+  #vignette{position:fixed;inset:0;z-index:5;pointer-events:none;background:radial-gradient(ellipse 75% 65% at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%)}
+
+  #hud{position:fixed;z-index:10;top:max(14px,env(safe-area-inset-top));left:14px;right:14px;display:flex;justify-content:space-between;pointer-events:none;opacity:0;transition:opacity .6s}
+  #hud.on{opacity:1}
+  .pill{background:rgba(251,243,228,.94);color:var(--azul-n);border-radius:999px;padding:9px 14px;font-weight:600;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+  #hint{position:fixed;z-index:10;left:50%;bottom:max(26px,env(safe-area-inset-bottom));transform:translateX(-50%);
+    background:rgba(15,47,107,.9);color:var(--crema);padding:12px 18px;border-radius:14px;font-size:15px;text-align:center;
+    width:max-content;max-width:88vw;opacity:0;transition:opacity .6s;pointer-events:none}
+  #hint.on{opacity:1}
+
+  #sheet{position:fixed;z-index:15;left:0;right:0;bottom:0;max-height:78vh;overflow:auto;background:var(--crema);
+    border-radius:22px 22px 0 0;padding:26px 24px max(28px,env(safe-area-inset-bottom));
+    transform:translateY(105%);transition:transform .45s cubic-bezier(.2,.8,.2,1);box-shadow:0 -10px 40px rgba(0,0,0,.35)}
+  #sheet.open{transform:none}
+  #sheet .bar{width:44px;height:5px;border-radius:5px;background:#d8ccb6;margin:-12px auto 16px}
+  #sheet .meta{margin:0 0 6px;color:var(--rosa);font-weight:600;font-size:14px}
+  #sheet h2{font-family:"Abril Fatface",Georgia,serif;font-weight:400;font-size:clamp(28px,8vw,38px);line-height:1.05;margin:0 0 14px;color:var(--azul-n);padding-right:44px}
+  #sheet .body{font-size:16.5px;line-height:1.6;margin:0 0 16px;max-width:62ch}
+  #sheet .where{font-size:14px;margin:0;padding-top:12px;border-top:1px solid #e6dac4;color:#5b5466}
+  #close{position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;border:0;background:var(--azul);color:#fff;font-size:24px;cursor:pointer}
+
+  #final{position:fixed;z-index:16;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,47,107,.82);padding:24px}
+  #final.on{display:flex}
+  #final .card{background:var(--crema);border-radius:20px;padding:30px 26px;text-align:center;max-width:340px}
+  #final h3{font-family:"Abril Fatface",Georgia,serif;font-weight:400;font-size:36px;line-height:1;margin:0 0 12px;color:var(--rosa)}
+  #final p{margin:0 0 22px;line-height:1.5}
+  #final .btn{align-self:center}
+  @media (prefers-reduced-motion:reduce){.lid,#intro,#sheet,#hint,#hud{transition:none}}
+</style>
+</head>
+<body>
+
+<section id="intro">
+  <p class="kicker">Frida Kahlo · La Casa Azul, Coyoacán</p>
+  <h1>Desde la cama<br>de Frida</h1>
+  <p class="lead">Durante meses no pudo levantarse. Pintó acostada, con un caballete sobre la cama y un espejo arriba. Ahora mirás con sus ojos.</p>
+  <button class="btn" id="enter">Abrir los ojos</button>
+  <p class="fine">Mové el celular para mirar alrededor. Te va a pedir permiso de movimiento y de cámara: aceptalos, el espejo te espera.</p>
+</section>
+
+<div class="lid" id="lid-top"></div><div class="lid" id="lid-bot"></div>
+<div id="vignette"></div>
+
+<div id="hud"><span class="pill" id="count">Cuadros 0/6</span></div>
+<div id="hint"></div>
+
+<aside id="sheet" aria-hidden="true">
+  <div class="bar"></div>
+  <button id="close" aria-label="Cerrar">×</button>
+  <p class="meta" id="s-meta"></p>
+  <h2 id="s-title"></h2>
+  <p class="body" id="s-body"></p>
+  <p class="where" id="s-where"></p>
+</aside>
+
+<div id="final">
+  <div class="card">
+    <h3>«Pies, para qué los quiero si tengo alas para volar»</h3>
+    <p>Viste todo lo que Frida veía desde su cama. Seguí leyendo el fanzine.</p>
+    <button class="btn" id="final-ok">Seguir mirando</button>
+  </div>
+</div>
+
+<video id="cam-video" playsinline muted autoplay style="display:none"></video>
+
+<a-scene id="scene" renderer="antialias:true; colorManagement:true" vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false" loading-screen="enabled:false"
+  cursor="rayOrigin: mouse; fuse: false" raycaster="objects: .clickable; far: 30">
+
+  <!-- Ojos de Frida: acostada, cabeza sobre la almohada. Adelante (-z) = pies de la cama -->
+  <a-entity id="cam" camera="fov:75" position="0 0.95 0"
+    look-controls="magicWindowTrackingEnabled:true; touchEnabled:true; pointerLockEnabled:false"></a-entity>
+
+  <a-entity light="type: hemisphere; color: #fff1dc; groundColor: #5a3a22; intensity: 0.75"></a-entity>
+  <a-entity light="type: directional; color: #ffd49a; intensity: 0.9" position="1.5 3 -4"></a-entity>
+
+  <!-- Cuarto 360 -->
+  <a-sky id="sky" radius="14" color="#3a2a1e"></a-sky>
+
+  <!-- Cama: todo lo que Frida tiene pegado a los ojos -->
+  <a-entity id="bed">
+    <a-box class="blanket" position="0 0.52 -0.7" width="1.5" height="0.2" depth="2.5"></a-box>
+    <a-sphere class="blanket" position="0 0.6 -1.05" radius="1" scale="0.42 0.13 0.85"></a-sphere>
+    <a-box class="lace" position="0 0.635 -0.08" width="1.54" height="0.03" depth="0.42"></a-box>
+    <a-box class="lace" position="0.77 0.4 -0.7" width="0.02" height="0.42" depth="2.5"></a-box>
+    <a-box class="lace" position="-0.77 0.4 -0.7" width="0.02" height="0.42" depth="2.5"></a-box>
+    <a-box class="wood" position="0 0.78 -1.98" width="1.66" height="0.62" depth="0.07"></a-box>
+    <a-box class="wood" position="0 0.92 0.66" width="1.66" height="1.05" depth="0.09"></a-box>
+    <a-box class="wood" position="0 1.5 0.66" width="1.2" height="0.14" depth="0.1"></a-box>
+  </a-entity>
+
+  <!-- Dosel con el espejo -->
+  <a-entity id="canopy" position="0 2.36 -0.66">
+    <a-box class="wood" position="0 0.03 0" width="1.74" height="0.05" depth="2.7"></a-box>
+    <a-box class="wood" position="0 -0.05 -1.32" width="1.74" height="0.14" depth="0.08"></a-box>
+    <a-box class="wood" position="0 -0.05 1.32" width="1.74" height="0.14" depth="0.08"></a-box>
+    <a-box class="wood" position="-0.84 -0.05 0" width="0.08" height="0.14" depth="2.7"></a-box>
+    <a-box class="wood" position="0.84 -0.05 0" width="0.08" height="0.14" depth="2.7"></a-box>
+    <a-box position="0 -0.012 0.2" width="1.26" height="0.02" depth="1.66" color="#2a1709"></a-box>
+    <a-plane id="mirror" class="clickable" position="0 -0.024 0.2" rotation="90 0 0" width="1.15" height="1.55"
+      material="shader: flat; color: #9aa3ad"></a-plane>
+  </a-entity>
+  <a-entity id="posts"></a-entity>
+
+  <a-entity id="room"></a-entity>
+</a-scene>
+
+<script>
+{
+  /* ---------- Ajustes de encuadre ---------- */
+  /* at: [giro horizontal en grados (+ derecha), altura en grados (+ arriba), distancia en metros] */
+  const SKY_FILE = 'img/cuarto-360.jpg';
+  const SKY_ROTATION = '0 -90 0';
+
+  /* ---------- Contenido ---------- */
+  const PAINTINGS = [
+    { id:'mi-familia', file:'mi-familia.jpg', title:'Mi familia', year:'c. 1949–1954', tech:'Óleo sobre masonite · inconcluso',
+      where:'Museo Frida Kahlo (la Casa Azul), Coyoacán',
+      body:'Es el cuadro que tenés enfrente, en el caballete. Un árbol genealógico pintado en retratos: sus abuelos, sus padres, sus hermanas y sus sobrinos, todos mirando hacia afuera. Lo trabajó acostada en sus últimos años, cuando ya casi no podía levantarse, y quedó sin terminar. Por eso hay caras completas al lado de otras apenas esbozadas.',
+      easel:true, pos:'0 1.25 -1.45', w:0.8 },
+    { id:'dos-fridas', file:'las-dos-fridas.jpg', title:'Las dos Fridas', year:'1939', tech:'Óleo sobre tela · 173 × 173 cm',
+      where:'Museo de Arte Moderno, Ciudad de México',
+      body:'La pintó en 1939, el año en que se divorció de Diego Rivera. Dos Fridas tomadas de la mano: a la derecha, la mexicana, con vestido de tehuana —la que Diego amaba—, sostiene un pequeño retrato de él. A la izquierda, la europea, de vestido blanco, con el corazón expuesto y una vena cortada que gotea sobre la falda. Las une la misma arteria: una sola mujer partida en dos.',
+      at:[-86, 13, 2.6], w:1.0 },
+    { id:'diego', file:'diego-en-mi-pensamiento.jpg', title:'Diego en mi pensamiento', year:'1943', tech:'Óleo sobre masonite · 76 × 61 cm',
+      where:'Colección Jacques y Natasha Gelman, Ciudad de México',
+      body:'La empezó en 1940, después de volver a casarse con Diego, y la terminó en 1943. Se pinta vestida de tehuana, con el tocado de encaje como un halo, y en la frente lleva a Diego: lo tiene metido en la cabeza. Las nervaduras que salen del tocado parecen raíces o una telaraña. Amor y obsesión en el mismo cuadro.',
+      at:[-117, 13, 2.6], w:0.6 },
+    { id:'collar', file:'collar-de-espinas.jpg', title:'Autorretrato con collar de espinas y colibrí', year:'1940', tech:'Óleo sobre tela · 61 × 47 cm',
+      where:'Harry Ransom Center, Universidad de Texas en Austin',
+      body:'Pintado en 1940, después del divorcio y del final de su relación con el fotógrafo Nickolas Muray. El collar de espinas le lastima el cuello como la corona de Cristo, y de él cuelga un colibrí muerto, amuleto para el amor en la tradición popular mexicana. Atrás, un gato negro al acecho y un mono, regalo de Diego. Mira de frente, sin queja.',
+      at:[62, 27, 2.6], w:0.46 },
+    { id:'columna', file:'la-columna-rota.jpg', title:'La columna rota', year:'1944', tech:'Óleo sobre masonite · 40 × 31 cm',
+      where:'Museo Dolores Olmedo, Ciudad de México',
+      body:'En 1944 tuvo que usar un corsé de acero. Se pinta con el cuerpo abierto: en lugar de columna vertebral, una columna de piedra quebrada. Clavos por todo el cuerpo, lágrimas en la cara, pero la mirada firme. Es la marca del accidente de colectivo de 1925, cuando tenía 18 años: el mismo que la dejó meses en esta cama.',
+      at:[89, 13, 2.6], w:0.6 },
+    { id:'viva', file:'viva-la-vida.jpg', title:'Viva la vida', year:'1954', tech:'Óleo sobre masonite · 60 × 51 cm',
+      where:'Museo Frida Kahlo (la Casa Azul), Coyoacán',
+      body:'Sandías enteras, en mitades y en tajadas. Es de sus últimas obras, pintada en 1954, pocos días antes de morir. En la tajada del frente escribió «Viva la vida, Coyoacán 1954» y su nombre. Después de tanto dolor, su despedida fue una celebración. Hoy sigue colgado en la Casa Azul, a pocos metros de esta cama.',
+      at:[117, 13, 2.6], w:0.8 }
+  ];
+  const MIRROR = { title:'El espejo del dosel', year:'1925', tech:'Lo que Frida veía todos los días',
+    where:'La cama sigue en la Casa Azul, con su espejo',
+    body:'Después del accidente de 1925 pasó meses inmovilizada. Su madre mandó poner un espejo en el dosel de la cama y un caballete adaptado para pintar acostada. Frida tenía delante una sola modelo: ella misma. Por eso se pintó tantas veces. Ahora, en ese mismo espejo, estás vos.' };
+
+  const $ = id => document.getElementById(id);
+  const room = $('room');
+  const seen = new Set();
+  const make = (tag, attrs, parent) => {
+    const el = document.createElement(tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    (parent || room).appendChild(el);
+    return el;
+  };
+
+  /* ---------- Texturas directas en three.js ---------- */
+  const applyTex = (el, source, opts = {}) => {
+    const apply = () => {
+      const mesh = el.getObject3D('mesh');
+      if (!mesh) return false;
+      const T = AFRAME.THREE;
+      let tex;
+      if (source instanceof HTMLVideoElement) tex = new T.VideoTexture(source);
+      else if (source instanceof HTMLCanvasElement) tex = new T.CanvasTexture(source);
+      else tex = new T.Texture(source);
+      if ('colorSpace' in tex) tex.colorSpace = T.SRGBColorSpace;
+      if (opts.mirror) { tex.wrapS = T.RepeatWrapping; tex.repeat.x = -1; tex.offset.x = 1; }
+      if (opts.repeat) { tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(opts.repeat[0], opts.repeat[1]); }
+      tex.anisotropy = 8;
+      tex.needsUpdate = true;
+      mesh.material.map = tex;
+      mesh.material.color.set('#ffffff');
+      mesh.material.needsUpdate = true;
+      return true;
+    };
+    if (!apply()) el.addEventListener('object3dset', function h(e) { if (e.detail.type === 'mesh' && apply()) el.removeEventListener('object3dset', h); });
+  };
+
+  const placeholder = (p, ratio) => {
+    const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * ratio);
+    const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, c.height);
+    gr.addColorStop(0, '#f2b51b'); gr.addColorStop(1, '#e4007c');
+    g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#fbf3e4'; g.textAlign = 'center';
+    g.font = '46px "Abril Fatface", Georgia, serif'; g.fillText(p.title, 256, c.height / 2);
+    g.font = '22px "Work Sans", sans-serif'; g.fillText('Falta img/' + p.file, 256, c.height - 36);
+    return c;
+  };
+
+  /* ---------- Cuadros ---------- */
+  let completed = false, finalShown = false;
+  const buildPainting = p => {
+    let pos = p.pos;
+    if (p.at) {
+      const [yaw, pitch, r] = p.at, d = Math.PI / 180;
+      pos = `${(r * Math.sin(yaw * d) * Math.cos(pitch * d)).toFixed(3)} ${(0.95 + r * Math.sin(pitch * d)).toFixed(3)} ${(-r * Math.cos(yaw * d) * Math.cos(pitch * d)).toFixed(3)}`;
+    }
+    const group = make('a-entity', { position: pos });
+    faceEyes(group);
+    const frameOut = make('a-box', { depth: 0.04, color: p.easel ? '#d9c7a8' : '#b8862b', class: 'clickable' }, group);
+    const frameIn  = make('a-box', { depth: 0.045, color: p.easel ? '#efe6d6' : '#4a2a12', class: 'clickable' }, group);
+    const canvas = make('a-plane', { width: p.w, position: '0 0 0.03', class: 'clickable', material: 'shader: flat; color: #ffffff' }, group);
+    const dot = make('a-circle', { radius: 0.04, color: '#e4007c', position: '0 0 0.06',
+      animation: 'property: scale; to: 1.6 1.6 1.6; dir: alternate; loop: true; dur: 700; easing: easeInOutSine' }, group);
+
+    if (p.easel) {
+      // Caballete de madera apoyado en la cama
+      make('a-box', { class: 'wood', position: '0 -0.36 0.02', width: p.w + 0.16, height: 0.05, depth: 0.1 }, group);
+      make('a-box', { class: 'wood', position: `${-p.w / 2 - 0.05} -0.3 -0.04`, width: 0.045, height: 1.0, depth: 0.045 }, group);
+      make('a-box', { class: 'wood', position: `${p.w / 2 + 0.05} -0.3 -0.04`, width: 0.045, height: 1.0, depth: 0.045 }, group);
+      make('a-box', { class: 'wood', position: '0 0.02 -0.05', width: 0.04, height: 1.25, depth: 0.04 }, group);
+    }
+
+    const size = ratio => {
+      const h = p.w * ratio, b = p.easel ? 0.03 : 0.1;
+      canvas.setAttribute('height', h);
+      frameOut.setAttribute('width', p.w + b * 2); frameOut.setAttribute('height', h + b * 2);
+      frameIn.setAttribute('width', p.w + b * 0.6); frameIn.setAttribute('height', h + b * 0.6);
+      dot.setAttribute('position', `${p.w / 2 + b + 0.05} ${-h / 2 - b - 0.05} 0.06`);
+    };
+    const img = new Image();
+    img.onload = () => { size(img.naturalHeight / img.naturalWidth); applyTex(canvas, img); };
+    img.onerror = () => { size(0.75); applyTex(canvas, placeholder(p, 0.75)); };
+    img.src = 'img/' + p.file;
+
+    group.addEventListener('click', () => {
+      openSheet(p);
+      if (!seen.has(p.id)) {
+        seen.add(p.id);
+        dot.setAttribute('visible', false);
+        $('count').textContent = `Cuadros ${seen.size}/${PAINTINGS.length}`;
+        if (seen.size === PAINTINGS.length) completed = true;
+      }
+    });
+  };
+
+  /* ---------- Orientar cuadros hacia los ojos ---------- */
+  function faceEyes(el) {
+    const f = () => el.object3D.lookAt(0, 0.95, 0);
+    if (el.hasLoaded) return f();
+    el.addEventListener('loaded', function h(e) { if (e.target === el) { f(); el.removeEventListener('loaded', h); } });
+  }
+
+  /* ---------- Texturas de la cama (madera, manta a rayas, encaje) ---------- */
+  const woodTex = () => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 512;
+    const g = c.getContext('2d');
+    g.fillStyle = '#4a2a14'; g.fillRect(0, 0, 256, 512);
+    for (let i = 0; i < 90; i++) {
+      const x = Math.random() * 256, w = 1 + Math.random() * 3;
+      g.strokeStyle = `rgba(${20 + Math.random() * 40},${8 + Math.random() * 18},0,${0.25 + Math.random() * 0.35})`;
+      g.lineWidth = w; g.beginPath(); g.moveTo(x, 0);
+      for (let y = 0; y <= 512; y += 32) g.lineTo(x + Math.sin(y / 60 + i) * 4, y);
+      g.stroke();
+    }
+    const sh = g.createLinearGradient(0, 0, 256, 0);
+    sh.addColorStop(0, 'rgba(255,200,140,.08)'); sh.addColorStop(.5, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(255,200,140,.06)');
+    g.fillStyle = sh; g.fillRect(0, 0, 256, 512);
+    return c;
+  };
+  const blanketTex = () => {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+    const g = c.getContext('2d');
+    const bands = ['#cdb89a', '#7a5a3c', '#cdb89a', '#e9dfcc', '#5c3f2a', '#e9dfcc', '#cdb89a', '#9b7a55'];
+    let y = 0, i = 0;
+    while (y < 512) { const h = 18 + (i % 3) * 14; g.fillStyle = bands[i % bands.length]; g.fillRect(0, y, 512, h); y += h; i++; }
+    for (let k = 0; k < 9000; k++) {
+      g.fillStyle = `rgba(${Math.random() < .5 ? '255,255,255' : '0,0,0'},${Math.random() * 0.08})`;
+      g.fillRect(Math.random() * 512, Math.random() * 512, 2, 1);
+    }
+    return c;
+  };
+  const laceTex = () => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#f4efe4'; g.fillRect(0, 0, 256, 256);
+    g.strokeStyle = 'rgba(150,130,100,.35)'; g.lineWidth = 2;
+    for (let x = 16; x < 256; x += 32) for (let y = 16; y < 256; y += 32) {
+      g.beginPath(); g.arc(x, y, 10, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.arc(x, y, 3, 0, Math.PI * 2); g.stroke();
+    }
+    return c;
+  };
+  const dressBed = () => {
+    const wood = woodTex(), blanket = blanketTex(), lace = laceTex();
+    // Postes torneados del dosel
+    [[-0.84, -1.98], [0.84, -1.98], [-0.84, 0.66], [0.84, 0.66]].forEach(([x, z]) => {
+      make('a-cylinder', { class: 'wood', position: `${x} 1.2 ${z}`, radius: 0.045, height: 2.4 }, $('posts'));
+      [0.55, 1.15, 1.75].forEach(y => make('a-sphere', { class: 'wood', position: `${x} ${y} ${z}`, radius: 0.065, scale: '1 0.6 1' }, $('posts')));
+    });
+    document.querySelectorAll('.wood').forEach(el => applyTex(el, wood, { repeat: [1, 2] }));
+    document.querySelectorAll('.blanket').forEach(el => applyTex(el, blanket, { repeat: [1, 3] }));
+    document.querySelectorAll('.lace').forEach(el => applyTex(el, lace, { repeat: [6, 1] }));
+  };
+
+  /* ---------- Fondo 360 ---------- */
+  const loadSky = () => {
+    const img = new Image();
+    img.onload = () => {
+      const sky = $('sky');
+      sky.setAttribute('rotation', SKY_ROTATION);
+      sky.setAttribute('material', 'shader: flat; side: back; color: #ffffff; npot: true');
+      applyTex(sky, img);
+    };
+    img.src = SKY_FILE;
+  };
+
+  /* ---------- Espejo con la cámara frontal ---------- */
+  const mirrorPlaceholder = () => {
+    const c = document.createElement('canvas'); c.width = 400; c.height = 512;
+    const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 400, 512);
+    gr.addColorStop(0, '#c9d1d8'); gr.addColorStop(.5, '#8d98a3'); gr.addColorStop(1, '#b7c0c8');
+    g.fillStyle = gr; g.fillRect(0, 0, 400, 512);
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.textAlign = 'center';
+    g.font = '26px "Work Sans", sans-serif';
+    g.fillText('Permití la cámara', 200, 240); g.fillText('para verte en el espejo', 200, 276);
+    return c;
+  };
+  const startMirror = async () => {
+    const mirror = $('mirror');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 720 } }, audio: false });
+      const v = $('cam-video');
+      v.srcObject = stream;
+      await v.play();
+      applyTex(mirror, v, { mirror: true });
+    } catch (e) {
+      applyTex(mirror, mirrorPlaceholder());
+    }
+  };
+  $('mirror').addEventListener('click', () => openSheet(MIRROR));
+
+  /* ---------- Ficha ---------- */
+  const openSheet = p => {
+    $('s-meta').textContent = `${p.year} · ${p.tech}`;
+    $('s-title').textContent = p.title;
+    $('s-body').textContent = p.body;
+    $('s-where').textContent = p.where;
+    $('sheet').classList.add('open');
+    $('sheet').setAttribute('aria-hidden', 'false');
+    $('hint').classList.remove('on');
+  };
+  $('close').addEventListener('click', () => {
+    $('sheet').classList.remove('open');
+    $('sheet').setAttribute('aria-hidden', 'true');
+    if (completed && !finalShown) { finalShown = true; setTimeout(() => $('final').classList.add('on'), 350); }
+  });
+  $('final-ok').addEventListener('click', () => $('final').classList.remove('on'));
+
+  /* ---------- Entrada ---------- */
+  const hint = (msg, ms) => { $('hint').textContent = msg; $('hint').classList.add('on'); if (ms) setTimeout(() => $('hint').classList.remove('on'), ms); };
+  $('enter').addEventListener('click', async () => {
+    let msg = 'Mirá al frente: el caballete. Levantá el celu: el espejo.';
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const r = await DeviceOrientationEvent.requestPermission();
+        if (r !== 'granted') msg = 'Arrastrá con el dedo para mirar. Arriba está el espejo.';
+      } else if (!('ontouchstart' in window)) {
+        msg = 'Arrastrá con el mouse para mirar. Arriba está el espejo.';
+      }
+    } catch (e) {}
+    startMirror();
+    $('intro').classList.add('hide');
+    setTimeout(() => document.body.classList.add('awake'), 300);
+    setTimeout(() => { $('hud').classList.add('on'); hint(msg, 7000); }, 2600);
+  });
+
+  /* ---------- Arranque ---------- */
+  const start = () => {
+    PAINTINGS.forEach(buildPainting);
+    dressBed();
+    applyTex($('mirror'), mirrorPlaceholder());
+    loadSky();
+  };
+  const fontsReady = document.fonts ? Promise.race([document.fonts.load('46px "Abril Fatface"'), new Promise(r => setTimeout(r, 1500))]) : Promise.resolve();
+  const scene = $('scene');
+  const go = () => fontsReady.then(start, start);
+  if (scene.hasLoaded) go(); else scene.addEventListener('loaded', go);
+}
+</script>
+</body>
+</html>
