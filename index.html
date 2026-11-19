@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1d4ea3">
+<title>La Casa Azul · Frida Kahlo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Work+Sans:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+<style>
+  :root{
+    --azul:#1d4ea3; --azul-n:#0f2f6b; --rosa:#e4007c; --amarillo:#f2b51b;
+    --verde:#2f7d4f; --crema:#fbf3e4; --tinta:#1b1a2e;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--azul-n);font-family:"Work Sans",system-ui,sans-serif;color:var(--tinta)}
+  a-scene{position:fixed;inset:0}
+
+  /* Pantalla de entrada */
+  #intro{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:flex-end;
+    padding:max(28px,env(safe-area-inset-top)) 26px max(36px,env(safe-area-inset-bottom));
+    background:
+      radial-gradient(circle at 85% 12%, rgba(242,181,27,.9) 0 46px, transparent 47px),
+      radial-gradient(circle at 85% 12%, rgba(228,0,124,.55) 0 70px, transparent 71px),
+      linear-gradient(180deg,#2a5fbd 0%,var(--azul) 45%,var(--azul-n) 100%);
+    color:var(--crema);transition:opacity .6s ease}
+  #intro.hide{opacity:0;pointer-events:none}
+  .picado{position:absolute;top:0;left:0;right:0;height:64px;display:flex;justify-content:space-around}
+  .picado span{width:13%;height:56px;clip-path:polygon(0 0,100% 0,100% 80%,85% 100%,70% 80%,50% 100%,30% 80%,15% 100%,0 80%)}
+  .kicker{font-weight:600;font-size:14px;letter-spacing:.02em;color:var(--amarillo);margin:0 0 8px}
+  #intro h1{font-family:"Abril Fatface",Georgia,serif;font-weight:400;font-size:clamp(46px,14vw,84px);line-height:.98;margin:0 0 16px}
+  #intro p.lead{font-size:17px;line-height:1.5;max-width:30ch;margin:0 0 28px;opacity:.92}
+  .btn{appearance:none;border:0;border-radius:999px;background:var(--rosa);color:#fff;font:600 18px "Work Sans",sans-serif;
+    padding:17px 28px;min-height:56px;cursor:pointer;box-shadow:0 8px 0 #9c0056;align-self:flex-start;transition:transform .1s}
+  .btn:active{transform:translateY(4px);box-shadow:0 4px 0 #9c0056}
+  .btn:focus-visible{outline:3px solid var(--amarillo);outline-offset:3px}
+  .fine{font-size:13px;opacity:.7;margin:18px 0 0}
+
+  /* HUD */
+  #hud{position:fixed;z-index:10;top:max(14px,env(safe-area-inset-top));left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;pointer-events:none;opacity:0;transition:opacity .5s}
+  #hud.on{opacity:1}
+  .pill{background:rgba(251,243,228,.94);color:var(--azul-n);border-radius:999px;padding:9px 14px;font-weight:600;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+  #hint{position:fixed;z-index:10;left:50%;bottom:max(26px,env(safe-area-inset-bottom));transform:translateX(-50%);
+    background:rgba(15,47,107,.9);color:var(--crema);padding:12px 18px;border-radius:14px;font-size:15px;text-align:center;
+    width:max-content;max-width:88vw;opacity:0;transition:opacity .5s;pointer-events:none}
+  #hint.on{opacity:1}
+
+  /* Ficha del cuadro */
+  #sheet{position:fixed;z-index:15;left:0;right:0;bottom:0;max-height:78vh;overflow:auto;background:var(--crema);
+    border-radius:22px 22px 0 0;padding:26px 24px max(28px,env(safe-area-inset-bottom));
+    transform:translateY(105%);transition:transform .45s cubic-bezier(.2,.8,.2,1);box-shadow:0 -10px 40px rgba(0,0,0,.35)}
+  #sheet.open{transform:none}
+  #sheet .bar{width:44px;height:5px;border-radius:5px;background:#d8ccb6;margin:-12px auto 16px}
+  #sheet .meta{margin:0 0 6px;color:var(--rosa);font-weight:600;font-size:14px}
+  #sheet h2{font-family:"Abril Fatface",Georgia,serif;font-weight:400;font-size:clamp(30px,8vw,40px);line-height:1.05;margin:0 0 14px;color:var(--azul-n);padding-right:40px}
+  #sheet .body{font-size:16.5px;line-height:1.6;margin:0 0 16px;max-width:62ch}
+  #sheet .where{font-size:14px;margin:0;padding-top:12px;border-top:1px solid #e6dac4;color:#5b5466}
+  #close{position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;border:0;background:var(--azul);color:#fff;font-size:24px;line-height:1;cursor:pointer}
+  #close:focus-visible{outline:3px solid var(--rosa);outline-offset:2px}
+
+  #final{position:fixed;z-index:16;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,47,107,.82);padding:24px}
+  #final.on{display:flex}
+  #final .card{background:var(--crema);border-radius:20px;padding:30px 26px;text-align:center;max-width:340px}
+  #final h3{font-family:"Abril Fatface",Georgia,serif;font-weight:400;font-size:38px;line-height:1;margin:0 0 12px;color:var(--rosa)}
+  #final p{margin:0 0 22px;line-height:1.5}
+  #final .btn{align-self:center}
+  #hud .btn-casa{pointer-events:auto;border:0;cursor:pointer;background:var(--verde);color:#fff;font:600 14px "Work Sans",sans-serif;border-radius:999px;padding:9px 14px;min-height:40px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+  #tour{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;background:#0f2f6b}
+  #tour.on{display:flex}
+  #tour header{display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top)) 12px 10px;color:var(--crema)}
+  #tour header p{margin:0;flex:1;font-size:14px;line-height:1.3}
+  #tour header strong{display:block;font-family:"Abril Fatface",Georgia,serif;font-weight:400;font-size:20px}
+  #tour header a{color:var(--amarillo);font-size:13px;white-space:nowrap}
+  #tour-close{width:44px;height:44px;border-radius:50%;border:0;background:var(--rosa);color:#fff;font-size:24px;cursor:pointer;flex:none}
+  #tour iframe{flex:1;width:100%;border:0;background:#000}
+  @media (prefers-reduced-motion:reduce){#intro,#sheet,#hint,#hud{transition:none}}
+</style>
+</head>
+<body>
+
+<!-- Entrada -->
+<section id="intro">
+  <div class="picado" aria-hidden="true">
+    <span style="background:#e4007c"></span><span style="background:#f2b51b"></span><span style="background:#2f7d4f"></span>
+    <span style="background:#ff7a1a"></span><span style="background:#8e44ad"></span><span style="background:#e4007c"></span>
+  </div>
+  <p class="kicker">Frida Kahlo · Coyoacán, México</p>
+  <h1>La Casa<br>Azul</h1>
+  <p class="lead">Mové el celular para recorrer la casa. Tocá cada cuadro para conocer su historia.</p>
+  <button class="btn" id="enter">Entrar a la casa</button>
+  <p class="fine">Mejor con el celular en vertical. Si te pide permiso de movimiento, aceptalo.</p>
+</section>
+
+<!-- HUD -->
+<div id="hud"><span class="pill" id="count">Cuadros 0/5</span><button class="btn-casa" id="open-tour">Casa real →</button></div>
+<div id="hint">Mové el celu para mirar · Tocá un cuadro</div>
+
+<!-- Ficha -->
+<aside id="sheet" aria-hidden="true">
+  <div class="bar"></div>
+  <button id="close" aria-label="Cerrar">×</button>
+  <p class="meta" id="s-meta"></p>
+  <h2 id="s-title"></h2>
+  <p class="body" id="s-body"></p>
+  <p class="where" id="s-where"></p>
+</aside>
+
+<div id="final">
+  <div class="card">
+    <h3>¡Viva la vida!</h3>
+    <p>Recorriste los cinco cuadros de la Casa Azul. Seguí leyendo el fanzine para el resto de la historia.</p>
+    <button class="btn" id="final-ok">Seguir mirando</button>
+  </div>
+</div>
+
+<!-- Recorrido oficial de la Casa Azul (Matterport del Museo Frida Kahlo) -->
+<section id="tour" aria-hidden="true">
+  <header>
+    <p><strong>La Casa Azul real</strong>Recorrido virtual oficial del Museo Frida Kahlo</p>
+    <a href="https://my.matterport.com/show/?m=9WH2PEy5cVF" target="_blank" rel="noopener">Abrir aparte</a>
+    <button id="tour-close" aria-label="Volver a la sala">×</button>
+  </header>
+  <iframe id="tour-frame" title="Recorrido virtual de la Casa Azul" allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer" allowfullscreen></iframe>
+</section>
+
+<!-- Escena 3D -->
+<a-scene id="scene" renderer="antialias:true; colorManagement:true" vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false" loading-screen="enabled:false"
+  cursor="rayOrigin: mouse; fuse: false" raycaster="objects: .clickable; far: 20">
+
+  <a-entity id="cam" camera="fov:70" position="0 1.6 0"
+    look-controls="magicWindowTrackingEnabled:true; touchEnabled:true; pointerLockEnabled:false"></a-entity>
+
+  <a-entity light="type: ambient; color: #fff5e6; intensity: 0.75"></a-entity>
+  <a-entity light="type: point; color: #ffe2b0; intensity: 0.9; distance: 14" position="0 3.2 0"></a-entity>
+
+  <!-- Piso, techo y paredes (sala de 8 x 8 m) -->
+  <a-plane id="floor" rotation="-90 0 0" width="8" height="8" color="#b5562f"></a-plane>
+  <a-plane rotation="90 0 0" position="0 3.6 0" width="8" height="8" color="#f4ead8"></a-plane>
+
+  <a-plane position="0 1.8 -4" width="8" height="3.6" color="#1f50a6"></a-plane>
+  <a-plane position="0 1.8 4" rotation="0 180 0" width="8" height="3.6" color="#1f50a6"></a-plane>
+  <a-plane position="4 1.8 0" rotation="0 -90 0" width="8" height="3.6" color="#1f50a6"></a-plane>
+  <a-plane position="-4 1.8 0" rotation="0 90 0" width="8" height="3.6" color="#1f50a6"></a-plane>
+
+  <!-- Zócalo rojo, como en el patio de la casa -->
+  <a-plane position="0 0.25 -3.99" width="8" height="0.5" color="#b8322a"></a-plane>
+  <a-plane position="0 0.25 3.99" rotation="0 180 0" width="8" height="0.5" color="#b8322a"></a-plane>
+  <a-plane position="3.99 0.25 0" rotation="0 -90 0" width="8" height="0.5" color="#b8322a"></a-plane>
+  <a-plane position="-3.99 0.25 0" rotation="0 90 0" width="8" height="0.5" color="#b8322a"></a-plane>
+
+  <a-entity id="room"></a-entity>
+</a-scene>
+
+<script>
+{
+  /* ---------- Contenido: los cuadros ---------- */
+  const PAINTINGS = [
+    { id:'dos-fridas', file:'las-dos-fridas.jpg', title:'Las dos Fridas', year:'1939', tech:'Óleo sobre tela · 173 × 173 cm',
+      where:'Museo de Arte Moderno, Ciudad de México',
+      body:'La pintó en 1939, el año en que se divorció de Diego Rivera. Son dos Fridas tomadas de la mano. A la derecha, la Frida mexicana, con vestido de tehuana —la que Diego amaba—, sostiene un pequeño retrato de él. A la izquierda, la Frida europea, de vestido blanco, tiene el corazón expuesto y una vena cortada que gotea sobre la falda. Las une la misma arteria: es una sola mujer partida en dos, entre sus raíces alemanas y mexicanas, entre el amor y la pérdida.',
+      pos:'0 1.75 -3.96', rot:'0 0 0', w:1.9, h:1.9 },
+    { id:'collar', file:'collar-de-espinas.jpg', title:'Autorretrato con collar de espinas y colibrí', year:'1940', tech:'Óleo sobre tela · 61 × 47 cm',
+      where:'Harry Ransom Center, Universidad de Texas en Austin',
+      body:'Lo pintó en 1940, después del divorcio y del final de su relación con el fotógrafo Nickolas Muray, en cuya colección terminó. El collar de espinas le lastima el cuello como la corona de Cristo, y de él cuelga un colibrí muerto: en la tradición popular mexicana, el colibrí es un amuleto para el amor. Detrás de sus hombros, un gato negro al acecho y un mono, regalo de Diego. Mira de frente, sin queja: el dolor convertido en ícono.',
+      pos:'3.96 1.75 -1.5', rot:'0 -90 0', w:1.05, h:1.37 },
+    { id:'columna', file:'la-columna-rota.jpg', title:'La columna rota', year:'1944', tech:'Óleo sobre masonite · 40 × 31 cm',
+      where:'Museo Dolores Olmedo, Ciudad de México',
+      body:'En 1944 su salud empeoró y tuvo que usar un corsé de acero. Acá se pinta con el cuerpo abierto: en lugar de columna vertebral hay una columna de piedra, quebrada en pedazos. Tiene clavos por todo el cuerpo y lágrimas en la cara, pero sostiene la mirada. El paisaje desierto y agrietado repite su soledad. Es la marca del accidente de colectivo que sufrió en 1925, a los 18 años, y que la acompañó toda la vida.',
+      pos:'3.96 1.75 1.5', rot:'0 -90 0', w:1.01, h:1.34 },
+    { id:'diego-pensamiento', file:'diego-en-mi-pensamiento.jpg', title:'Diego en mi pensamiento', year:'1943', tech:'Óleo sobre masonite · 76 × 61 cm · también llamado «Autorretrato como tehuana»',
+      where:'Colección Jacques y Natasha Gelman, Ciudad de México',
+      body:'La empezó en 1940, después de volver a casarse con Diego Rivera, y la terminó en 1943. Se pinta con el traje de tehuana, el que a Diego le encantaba, y el tocado de encaje enmarca su cara como un halo. En la frente lleva a Diego: lo tiene literalmente metido en la cabeza. Desde el tocado salen nervaduras finas, como raíces o una telaraña, que la atrapan y a la vez la conectan con todo. Es amor y es obsesión en el mismo cuadro.',
+      pos:'-3.96 1.75 1.5', rot:'0 90 0', w:1.07, h:1.37 },
+    { id:'viva', file:'viva-la-vida.jpg', title:'Viva la vida', year:'1954', tech:'Óleo sobre masonite · 60 × 51 cm',
+      where:'Museo Frida Kahlo (la Casa Azul), Coyoacán',
+      body:'Sandías enteras, en mitades y en tajadas, bajo un cielo azul. Es una de las últimas obras que pintó, en 1954, pocos días antes de morir. En la tajada del frente escribió «Viva la vida, Coyoacán 1954» y su nombre. Después de tanto dolor, su despedida fue una celebración. Hoy está colgada en la Casa Azul: la misma casa que estás recorriendo.',
+      pos:'-3.96 1.75 -1.5', rot:'0 90 0', w:1.6, h:1.2 }
+  ];
+  const CASA = { title:'La Casa Azul', year:'1904', tech:'Londres 247, Coyoacán, Ciudad de México',
+    where:'Museo Frida Kahlo desde 1958',
+    body:'La construyó su padre, el fotógrafo Guillermo Kahlo, en 1904. Frida nació acá en 1907 y acá murió en 1954. Vivió en esta casa con Diego Rivera, pintó en su estudio del primer piso y la llenó de plantas, animales y arte popular. En el patio todavía se lee: «Frida y Diego vivieron en esta casa 1929-1954». Desde 1958 es museo, y su azul se volvió parte de la identidad de Frida.' };
+
+  const room = document.getElementById('room');
+  const seen = new Set();
+  const $ = id => document.getElementById(id);
+
+  const make = (tag, attrs, parent) => {
+    const el = document.createElement(tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    (parent || room).appendChild(el);
+    return el;
+  };
+
+  /* ---------- Texturas aplicadas directo en three.js (evita la caché de A-Frame) ---------- */
+  const applyTex = (el, source, repeat) => {
+    const apply = () => {
+      const mesh = el.getObject3D('mesh');
+      if (!mesh) return false;
+      const T = AFRAME.THREE;
+      const tex = source instanceof HTMLCanvasElement ? new T.CanvasTexture(source) : new T.Texture(source);
+      if ('colorSpace' in tex) tex.colorSpace = T.SRGBColorSpace;
+      if (repeat) { tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(repeat, repeat); }
+      tex.anisotropy = 4;
+      tex.needsUpdate = true;
+      mesh.material.map = tex;
+      mesh.material.color.set('#ffffff');
+      mesh.material.needsUpdate = true;
+      return true;
+    };
+    if (!apply()) el.addEventListener('object3dset', function h(e) { if (e.detail.type === 'mesh' && apply()) el.removeEventListener('object3dset', h); });
+  };
+
+  /* ---------- Texturas dibujadas (piso, cartel, cuadro faltante) ---------- */
+  const floorTex = () => {
+    const c = document.createElement('canvas'); c.width = c.height = 512;
+    const g = c.getContext('2d');
+    g.fillStyle = '#7a3418'; g.fillRect(0, 0, 512, 512);
+    const tones = ['#b5562f', '#a94e2a', '#c06036', '#b05230'];
+    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+      g.fillStyle = tones[(x * 3 + y * 5) % tones.length];
+      g.fillRect(x * 128 + 4, y * 128 + 4, 120, 120);
+    }
+    return c;
+  };
+
+  const wrap = (g, text, x, y, maxW, lh) => {
+    const words = text.split(' '); let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (g.measureText(test).width > maxW && line) { g.fillText(line, x, y); line = w; y += lh; }
+      else line = test;
+    }
+    g.fillText(line, x, y);
+  };
+
+  const placeholder = p => {
+    const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * p.h / p.w);
+    const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, c.height);
+    gr.addColorStop(0, '#f2b51b'); gr.addColorStop(1, '#e4007c');
+    g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#fbf3e4'; g.textAlign = 'center';
+    g.font = '44px "Abril Fatface", Georgia, serif';
+    wrap(g, p.title, 256, c.height / 2 - 40, 440, 50);
+    g.font = '22px "Work Sans", sans-serif';
+    g.fillText('Falta la imagen:', 256, c.height - 70);
+    g.fillText('img/' + p.file, 256, c.height - 40);
+    return c;
+  };
+
+  const signTex = () => {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#f2b51b'; g.fillRect(0, 0, 1024, 256);
+    g.fillStyle = '#0f2f6b'; g.textAlign = 'center';
+    g.font = '64px "Abril Fatface", Georgia, serif';
+    g.fillText('Frida y Diego vivieron', 512, 110);
+    g.font = '48px "Abril Fatface", Georgia, serif';
+    g.fillText('en esta casa · 1929–1954', 512, 186);
+    return c;
+  };
+
+  /* ---------- Decoración ---------- */
+  const decorate = () => {
+    applyTex($('floor'), floorTex(), 2);
+
+    // Vigas de madera en el techo
+    for (let i = -3; i <= 3; i += 1.5)
+      make('a-box', { position: `${i} 3.5 0`, width: 0.18, height: 0.2, depth: 8, color: '#6b3e1f' });
+
+    // Puerta verde (pared del fondo) y cartel del patio
+    make('a-box', { position: '0 1.25 3.97', width: 1.6, height: 2.5, depth: 0.06, color: '#f2b51b' });
+    const door = make('a-box', { position: '0 1.2 3.94', width: 1.36, height: 2.3, depth: 0.06, color: '#2f7d4f', class: 'clickable' });
+    door.addEventListener('click', openTour);
+    make('a-circle', { radius: 0.09, color: '#f2b51b', position: '0.5 1.2 3.9', rotation: '0 180 0',
+      animation: 'property: scale; to: 1.5 1.5 1.5; dir: alternate; loop: true; dur: 700; easing: easeInOutSine' });
+    make('a-box', { position: '0 1.2 3.9', width: 0.04, height: 2.3, depth: 0.04, color: '#1f5a37' });
+    const sign = make('a-plane', { position: '0 3 3.95', rotation: '0 180 0', width: 2.8, height: 0.7, class: 'clickable', material: 'shader: flat; color: #ffffff' });
+    applyTex(sign, signTex());
+    sign.addEventListener('click', () => openSheet(CASA));
+
+    // Macetas con cactus en las esquinas
+    [[-3.3, -3.3], [3.3, -3.3], [-3.3, 3.3], [3.3, 3.3]].forEach(([x, z], i) => {
+      make('a-cylinder', { position: `${x} 0.3 ${z}`, radius: 0.32, height: 0.6, color: i % 2 ? '#c0602f' : '#e4007c' });
+      make('a-cylinder', { position: `${x} 1.05 ${z}`, radius: 0.12, height: 0.95, color: '#3f8f4f' });
+      make('a-cylinder', { position: `${x + 0.2} 1.1 ${z}`, radius: 0.07, height: 0.4, color: '#3f8f4f' });
+      make('a-sphere',   { position: `${x} 1.56 ${z}`, radius: 0.07, color: '#e4007c' });
+    });
+
+    // Papel picado colgando del techo
+    const colors = ['#e4007c', '#f2b51b', '#2f7d4f', '#ff7a1a', '#8e44ad', '#19a7ce'];
+    [-2, 0, 2].forEach((z, row) => {
+      for (let i = 0; i < 16; i++) {
+        const x = -3.75 + i * 0.5;
+        const sag = 0.25 * Math.sin(Math.PI * (i + 0.5) / 16);
+        make('a-plane', { position: `${x} ${3.15 - sag} ${z}`, width: 0.36, height: 0.42,
+          color: colors[(i + row * 2) % colors.length], side: 'double', opacity: 0.92 });
+      }
+    });
+  };
+
+  /* ---------- Cuadros ---------- */
+  const buildPaintings = () => {
+    PAINTINGS.forEach(p => {
+      const group = make('a-entity', { position: p.pos, rotation: p.rot, 'data-id': p.id });
+      make('a-box', { width: p.w + 0.18, height: p.h + 0.18, depth: 0.06, color: '#c8962e', class: 'clickable' }, group);
+      make('a-box', { width: p.w + 0.06, height: p.h + 0.06, depth: 0.065, color: '#6b3e1f', class: 'clickable' }, group);
+      const canvas = make('a-plane', { width: p.w, height: p.h, position: '0 0 0.04', class: 'clickable', material: 'shader: flat; color: #ffffff' }, group);
+
+      // Indicador que late hasta que tocás el cuadro
+      const dot = make('a-circle', { radius: 0.07, color: '#e4007c', position: `${p.w / 2 + 0.02} ${-p.h / 2 - 0.02} 0.08`,
+        animation: 'property: scale; to: 1.5 1.5 1.5; dir: alternate; loop: true; dur: 700; easing: easeInOutSine' }, group);
+      p.dot = dot;
+
+      // Imagen real desde /img; si no está, se dibuja un cartel provisorio
+      const img = new Image();
+      img.onload = () => applyTex(canvas, img);
+      img.onerror = () => applyTex(canvas, placeholder(p));
+      img.src = 'img/' + p.file;
+
+      group.addEventListener('click', () => {
+        openSheet(p);
+        if (!seen.has(p.id)) {
+          seen.add(p.id);
+          dot.setAttribute('visible', false);
+          $('count').textContent = `Cuadros ${seen.size}/${PAINTINGS.length}`;
+          if (seen.size === PAINTINGS.length) completed = true;
+        }
+      });
+    });
+  };
+
+  /* ---------- Ficha ---------- */
+  let completed = false, finalShown = false;
+  const openSheet = p => {
+    $('s-meta').textContent = `${p.year} · ${p.tech}`;
+    $('s-title').textContent = p.title;
+    $('s-body').textContent = p.body;
+    $('s-where').textContent = p.where;
+    $('sheet').classList.add('open');
+    $('sheet').setAttribute('aria-hidden', 'false');
+    $('hint').classList.remove('on');
+  };
+  const closeSheet = () => {
+    $('sheet').classList.remove('open');
+    $('sheet').setAttribute('aria-hidden', 'true');
+    if (completed && !finalShown) { finalShown = true; setTimeout(() => $('final').classList.add('on'), 350); }
+  };
+  $('close').addEventListener('click', closeSheet);
+  $('final-ok').addEventListener('click', () => $('final').classList.remove('on'));
+
+  /* ---------- Recorrido real ---------- */
+  function openTour() {
+    const f = $('tour-frame');
+    if (!f.src) f.src = 'https://my.matterport.com/show/?m=9WH2PEy5cVF&play=1&qs=1';
+    $('tour').classList.add('on');
+    $('tour').setAttribute('aria-hidden', 'false');
+  }
+  $('open-tour').addEventListener('click', openTour);
+  $('tour-close').addEventListener('click', () => { $('tour').classList.remove('on'); $('tour').setAttribute('aria-hidden', 'true'); });
+
+  /* ---------- Entrada + permiso de giroscopio (iPhone) ---------- */
+  let hintMsg = 'Mové el celu para mirar · Tocá un cuadro · La puerta verde te lleva a la casa real';
+  $('enter').addEventListener('click', async () => {
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const r = await DeviceOrientationEvent.requestPermission();
+        if (r !== 'granted') hintMsg = 'Sin permiso de movimiento: arrastrá con el dedo para mirar';
+      } else if (!('ontouchstart' in window)) {
+        hintMsg = 'Arrastrá con el mouse para mirar · Hacé clic en un cuadro';
+      }
+    } catch (e) { hintMsg = 'Arrastrá con el dedo para mirar · Tocá un cuadro'; }
+    $('intro').classList.add('hide');
+    $('hud').classList.add('on');
+    $('hint').textContent = hintMsg;
+    $('hint').classList.add('on');
+    setTimeout(() => $('hint').classList.remove('on'), 6000);
+  });
+
+  /* ---------- Arranque (espera las tipografías para dibujar los carteles) ---------- */
+  const start = () => { decorate(); buildPaintings(); };
+  const fontsReady = document.fonts ? Promise.race([document.fonts.load('48px "Abril Fatface"'), new Promise(r => setTimeout(r, 1500))]) : Promise.resolve();
+  const scene = $('scene');
+  const go = () => fontsReady.then(start, start);
+  if (scene.hasLoaded) go(); else scene.addEventListener('loaded', go);
+}
+</script>
+</body>
+</html>
